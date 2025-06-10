@@ -170,28 +170,40 @@ const ManagePool = () => {
   }
 
   return (
-    <Box maxW="800px" mx="auto">
-      <Card mb={6}>
-        <CardBody>
-          <VStack spacing={6}>
-            <Heading size="md">管理资金池</Heading>
-            
-            <FormControl>
-              <FormLabel>资金池 ID</FormLabel>
-              <Input
-                value={poolId}
-                onChange={(e) => setPoolId(e.target.value)}
-                placeholder="请输入资金池 ID"
-              />
-            </FormControl>
+    <Box p={4}>
+      <VStack spacing={6} align="stretch">
+        <Card>
+          <CardBody>
+            <VStack spacing={4} align="stretch">
+              <Heading size="md">资金池管理</Heading>
+              <FormControl>
+                <FormLabel>资金池ID</FormLabel>
+                <Input
+                  type="number"
+                  value={poolId}
+                  onChange={(e) => setPoolId(e.target.value)}
+                  placeholder="请输入资金池ID"
+                />
+              </FormControl>
+              <Button
+                colorScheme="blue"
+                onClick={fetchPoolInfo}
+                isLoading={isLoading}
+              >
+                获取资金池信息
+              </Button>
+            </VStack>
+          </CardBody>
+        </Card>
 
-            {isLoadingInfo ? (
-              <Skeleton height="200px" width="100%" />
-            ) : poolInfo ? (
-              <Box w="100%" p={4} borderWidth={1} borderRadius="md">
+        {poolInfo && (
+          <Card>
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <Heading size="md">资金池信息</Heading>
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                   <GridItem>
-                    <Text fontWeight="medium">池名称</Text>
+                    <Text fontWeight="medium">名称</Text>
                     <Text>{poolInfo.name}</Text>
                   </GridItem>
                   <GridItem>
@@ -219,55 +231,61 @@ const ManagePool = () => {
                     <Text>{poolInfo.totalFunds} USDT</Text>
                   </GridItem>
                 </Grid>
-              </Box>
-            ) : poolId ? (
-              <Text color="red.500">未找到资金池信息</Text>
-            ) : null}
+              </VStack>
+            </CardBody>
+          </Card>
+        )}
 
-            <Divider />
-
-            <FormControl>
-              <FormLabel>金额 (USDT)</FormLabel>
-              <Input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="请输入金额"
-                type="number"
-                step="0.000001"
-              />
-            </FormControl>
-
-            <Text fontSize="sm" color="gray.500">
-              注意：金额单位为 USDT，最多支持 6 位小数
-            </Text>
-
-            <Box w="100%">
+        <Card>
+          <CardBody>
+            <VStack spacing={4} align="stretch">
+              <Heading size="md">添加资金</Heading>
+              <FormControl>
+                <FormLabel>金额 (USDT)</FormLabel>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="请输入金额"
+                />
+              </FormControl>
               <Button
-                colorScheme="blue"
+                colorScheme="green"
                 onClick={handleAddFunds}
                 isLoading={isLoading}
-                mr={4}
-                w="45%"
-                isDisabled={!poolInfo}
               >
                 添加资金
               </Button>
+            </VStack>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <VStack spacing={4} align="stretch">
+              <Heading size="md">提取资金</Heading>
+              <FormControl>
+                <FormLabel>金额 (USDT)</FormLabel>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="请输入金额"
+                />
+              </FormControl>
               <Button
                 colorScheme="red"
                 onClick={handleWithdrawFunds}
                 isLoading={isLoading}
-                w="45%"
-                isDisabled={!poolInfo}
               >
                 提取资金
               </Button>
-            </Box>
-          </VStack>
-        </CardBody>
-      </Card>
+            </VStack>
+          </CardBody>
+        </Card>
+      </VStack>
     </Box>
   )
 }
 
-export default ManagePool 
 export default ManagePool 
