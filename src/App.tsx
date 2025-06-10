@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ChakraProvider, Box } from '@chakra-ui/react';
-import { USDT_ADDRESS, USDT_ABI, LENDING_POOL_ADDRESS } from './constants/contracts';
+import { USDT_ADDRESS, USDT_ABI, LENDING_POOL_ADDRESS, LENDING_POOL_ABI } from './constants/contracts';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import ManagePool from './pages/ManagePool';
 import Authorize from './pages/Authorize';
 import CreatePool from './pages/CreatePool';
 import WhitelistManager from './pages/WhitelistManager';
+import UserBorrow from './pages/UserBorrow';
 
 const App = () => {
   const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
@@ -92,6 +93,16 @@ const App = () => {
                   <Authorize provider={provider} onAuthorized={() => setIsAuthorized(true)} />
                 ) : (
                   <WhitelistManager />
+                )
+              }
+            />
+            <Route
+              path="/user-borrow"
+              element={
+                !provider ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <UserBorrow provider={provider} />
                 )
               }
             />
