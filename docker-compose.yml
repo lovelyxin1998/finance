@@ -7,4 +7,6 @@ services:
       - "39905:39905"  # 格式为 "主机端口:容器端口"
     environment:
       - PORT=39905
-    restart: unless-stopped 
+    restart: unless-stopped
+    volumes:
+      - ./ssl:/etc/nginx/ssl  # 用于挂载 SSL 证书（生产环境使用） 

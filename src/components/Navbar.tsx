@@ -17,6 +17,9 @@ const Navbar = () => {
             <ChakraLink as={RouterLink} to="/manage-pool">
               管理资金池
             </ChakraLink>
+            <ChakraLink as={RouterLink} to="/user-borrow">
+              借款还款
+            </ChakraLink>
             <ChakraLink as={RouterLink} to="/whitelist">
               白名单管理
             </ChakraLink>
