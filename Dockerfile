@@ -19,6 +19,16 @@ RUN npm run build
 # 生产阶段
 FROM nginx:alpine
 
+# 创建 SSL 证书目录
+RUN mkdir -p /etc/nginx/ssl
+
+# 生成自签名证书（仅用于开发环境）
+RUN apk add --no-cache openssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/nginx.key \
+    -out /etc/nginx/ssl/nginx.crt \
+    -subj "/C=CN/ST=State/L=City/O=Organization/CN=localhost"
+
 # 复制构建产物到 Nginx 目录
 COPY --from=build /app/build /usr/share/nginx/html
 
