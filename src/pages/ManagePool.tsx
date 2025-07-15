@@ -29,7 +29,11 @@ interface PoolInfo {
   addressListLength: string
 }
 
-const ManagePool = () => {
+interface ManagePoolProps {
+  provider: ethers.providers.Web3Provider | null
+}
+
+const ManagePool = ({ provider }: ManagePoolProps) => {
   const [poolId, setPoolId] = useState('')
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -38,6 +42,16 @@ const ManagePool = () => {
   const toast = useToast()
 
   const fetchPoolInfo = async (id: string) => {
+    if (!provider) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
     try {
       if (!id) {
         setPoolInfo(null)
@@ -45,7 +59,6 @@ const ManagePool = () => {
       }
 
       setIsLoadingInfo(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -81,9 +94,19 @@ const ManagePool = () => {
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [poolId])
+  }, [poolId, provider])
 
   const handleAddFunds = async () => {
+    if (!provider) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
     try {
       if (!poolId || !amount) {
         toast({
@@ -96,7 +119,6 @@ const ManagePool = () => {
       }
 
       setIsLoading(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -127,6 +149,16 @@ const ManagePool = () => {
   }
 
   const handleWithdrawFunds = async () => {
+    if (!provider) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
     try {
       if (!poolId || !amount) {
         toast({
@@ -139,7 +171,6 @@ const ManagePool = () => {
       }
 
       setIsLoading(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -169,6 +200,12 @@ const ManagePool = () => {
     }
   }
 
+  const handleGetInfo = () => {
+    if (poolId) {
+      fetchPoolInfo(poolId)
+    }
+  }
+
   return (
     <Box p={4}>
       <VStack spacing={6} align="stretch">
@@ -187,7 +224,7 @@ const ManagePool = () => {
               </FormControl>
               <Button
                 colorScheme="blue"
-                onClick={fetchPoolInfo}
+                onClick={handleGetInfo}
                 isLoading={isLoading}
               >
                 获取资金池信息

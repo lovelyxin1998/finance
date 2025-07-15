@@ -30,7 +30,11 @@ interface PoolInfo {
   addressListLength: string
 }
 
-const WhitelistManager = () => {
+interface WhitelistManagerProps {
+  provider: ethers.providers.Web3Provider | null
+}
+
+const WhitelistManager = ({ provider }: WhitelistManagerProps) => {
   const [poolId, setPoolId] = useState('')
   const [addresses, setAddresses] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -39,6 +43,16 @@ const WhitelistManager = () => {
   const toast = useToast()
 
   const fetchPoolInfo = async (id: string) => {
+    if (!provider) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
     try {
       if (!id) {
         setPoolInfo(null)
@@ -46,7 +60,6 @@ const WhitelistManager = () => {
       }
 
       setIsLoadingInfo(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -82,9 +95,19 @@ const WhitelistManager = () => {
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [poolId])
+  }, [poolId, provider])
 
   const handleAddToWhitelist = async () => {
+    if (!provider) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
     try {
       if (!poolId || !addresses) {
         toast({
@@ -97,7 +120,6 @@ const WhitelistManager = () => {
       }
 
       setIsLoading(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -142,6 +164,16 @@ const WhitelistManager = () => {
   }
 
   const handleRemoveFromWhitelist = async () => {
+    if (!provider) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
     try {
       if (!poolId || !addresses) {
         toast({
@@ -154,7 +186,6 @@ const WhitelistManager = () => {
       }
 
       setIsLoading(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -195,6 +226,12 @@ const WhitelistManager = () => {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGetInfo = () => {
+    if (poolId) {
+      fetchPoolInfo(poolId)
     }
   }
 

