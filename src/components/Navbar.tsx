@@ -5,9 +5,10 @@ import { ethers } from 'ethers'
 interface NavbarProps {
   provider: ethers.providers.Web3Provider | null
   account: string
+  connectWallet: () => void
 }
 
-const Navbar = ({ provider, account }: NavbarProps) => {
+const Navbar = ({ provider, account, connectWallet }: NavbarProps) => {
   const location = useLocation();
   return (
     <Box bg="white" px={4} shadow="sm">
@@ -57,10 +58,14 @@ const Navbar = ({ provider, account }: NavbarProps) => {
           </Flex>
         </Flex>
         <Flex alignItems="center" gap={4}>
-          {account && (
+          {account ? (
             <Text fontSize="sm" color="gray.600">
               {account.slice(0, 6)}...{account.slice(-4)}
             </Text>
+          ) : (
+            <Button colorScheme="blue" size="sm" onClick={connectWallet}>
+              连接钱包
+            </Button>
           )}
         </Flex>
       </Flex>
