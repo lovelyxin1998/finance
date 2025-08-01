@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import { LENDING_POOL_ADDRESS, LENDING_POOL_ABI } from '../constants/contracts';
+import { LENDING_POOL_ADDRESS, LENDING_POOL_ABI, TOKENS } from '../constants/contracts';
 
 interface Props {
   provider: ethers.providers.Web3Provider | null;
@@ -11,10 +11,15 @@ const CreatePool: React.FC<Props> = ({ provider }) => {
   const [maxBorrow, setMaxBorrow] = useState('');
   const [name, setName] = useState('');
   const [feeRate, setFeeRate] = useState('');
+  const [selectedToken, setSelectedToken] = useState(TOKENS[0].address); // 默认选择第一个代币
   const [status, setStatus] = useState('');
 
   const handleCreate = async () => {
     if (!provider) return setStatus('请先连接钱包');
+    if (!poolId || !maxBorrow || !name || !feeRate) {
+      return setStatus('请填写所有必填字段');
+    }
+    
     try {
       const signer = provider.getSigner();
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer);
@@ -24,7 +29,8 @@ const CreatePool: React.FC<Props> = ({ provider }) => {
         ethers.BigNumber.from(poolId),
         maxBorrowWei,
         name,
-        ethers.BigNumber.from(feeRate)
+        ethers.BigNumber.from(feeRate),
+        selectedToken
       );
       setStatus('交易发送中...');
       await tx.wait();
@@ -48,6 +54,16 @@ const CreatePool: React.FC<Props> = ({ provider }) => {
       </div>
       <div>池名称: <input value={name} onChange={e => setName(e.target.value)} /></div>
       <div>手续费比例（百万分之一）: <input value={feeRate} onChange={e => setFeeRate(e.target.value)} /></div>
+      <div>
+        借款代币:
+        <select value={selectedToken} onChange={e => setSelectedToken(e.target.value)}>
+          {TOKENS.map(token => (
+            <option key={token.address} value={token.address}>
+              {token.symbol} ({token.address})
+            </option>
+          ))}
+        </select>
+      </div>
       <button onClick={handleCreate}>创建资金池</button>
       <div>{status}</div>
     </div>

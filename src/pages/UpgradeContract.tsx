@@ -13,7 +13,6 @@ import {
   useToast,
   Grid,
   GridItem,
-  Divider,
 } from '@chakra-ui/react'
 import { ethers } from 'ethers'
 

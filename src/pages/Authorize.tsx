@@ -20,15 +20,20 @@ const Authorize = ({ onAuthorized }: AuthorizeProps) => {
       if (!ethereum) return;
       const provider = new ethers.providers.Web3Provider(ethereum);
       const signer = provider.getSigner();
-      const address = await signer.getAddress();
+      const account = await signer.getAddress();
       const newStatus: { [symbol: string]: boolean } = {};
+      let allAuthorized = true;
       for (const token of TOKENS) {
         const contract = new ethers.Contract(token.address, token.abi, signer);
-        const allowance = await contract.allowance(address, LENDING_POOL_ADDRESS);
-        newStatus[token.symbol] = !allowance.isZero();
+        const allowance = await contract.allowance(account, LENDING_POOL_ADDRESS);
+        const isAuthorized = !allowance.isZero();
+        newStatus[token.symbol] = isAuthorized;
+        if (!isAuthorized) {
+          allAuthorized = false;
+        }
       }
       setStatus(newStatus);
-      if (Object.values(newStatus).every(v => v)) {
+      if (allAuthorized) {
         onAuthorized();
       }
     } catch (e) {
@@ -50,7 +55,6 @@ const Authorize = ({ onAuthorized }: AuthorizeProps) => {
       if (!ethereum) return;
       const provider = new ethers.providers.Web3Provider(ethereum);
       const signer = provider.getSigner();
-      const address = await signer.getAddress();
       const token = TOKENS.find(t => t.symbol === symbol)!;
       const contract = new ethers.Contract(token.address, token.abi, signer);
       const tx = await contract.approve(LENDING_POOL_ADDRESS, ethers.constants.MaxUint256);

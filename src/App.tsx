@@ -5,6 +5,7 @@ import { ChakraProvider, Box } from '@chakra-ui/react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import CreatePool from './components/CreatePool';
+import ModifyPool from './components/ModifyPool';
 import PoolFunds from './components/PoolFunds';
 import ManagePool from './pages/ManagePool';
 import WhitelistManager from './pages/WhitelistManager';
@@ -26,6 +27,34 @@ const App = () => {
     }
     try {
       const ethProvider = new ethers.providers.Web3Provider(window.ethereum);
+      
+      // 检查并切换到 BSC 链
+      const chainId = await ethProvider.send('eth_chainId', []);
+      const bscChainId = '0x38'; // BSC 主网 chainId
+      
+      if (chainId !== bscChainId) {
+        try {
+          await ethProvider.send('wallet_switchEthereumChain', [{ chainId: bscChainId }]);
+        } catch (switchError: any) {
+          // 如果 BSC 链未添加，则添加它
+          if (switchError.code === 4902) {
+            await ethProvider.send('wallet_addEthereumChain', [{
+              chainId: bscChainId,
+              chainName: 'Binance Smart Chain',
+              nativeCurrency: {
+                name: 'BNB',
+                symbol: 'BNB',
+                decimals: 18
+              },
+              rpcUrls: ['https://bsc-dataseed.binance.org/'],
+              blockExplorerUrls: ['https://bscscan.com/']
+            }]);
+          } else {
+            throw switchError;
+          }
+        }
+      }
+      
       await ethProvider.send('eth_requestAccounts', []);
       setProvider(ethProvider);
       const signer = ethProvider.getSigner();
@@ -33,6 +62,7 @@ const App = () => {
       setAccount(address);
       await checkAuthorization(ethProvider, address);
     } catch (e) {
+      console.error('连接钱包失败:', e);
       alert('连接钱包失败');
     }
   };
@@ -88,19 +118,31 @@ const App = () => {
   return (
     <ChakraProvider>
       <Box minH="100vh" bg="gray.50">
-        <Navbar provider={provider} account={account} connectWallet={connectWallet} />
+        <Navbar account={account} connectWallet={connectWallet} />
         <Box p={4}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Home provider={provider} account={account} />} />
             <Route
               path="/create-pool"
               element={
                 !provider || !account ? (
                   <Navigate to="/" replace />
                 ) : !isAuthorized ? (
-                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                  <Navigate to="/authorize" replace />
                 ) : (
                   <CreatePool provider={provider} />
+                )
+              }
+            />
+            <Route
+              path="/modify-pool"
+              element={
+                !provider || !account ? (
+                  <Navigate to="/" replace />
+                ) : !isAuthorized ? (
+                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                ) : (
+                  <ModifyPool provider={provider} />
                 )
               }
             />

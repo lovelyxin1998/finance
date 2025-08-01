@@ -229,12 +229,6 @@ const WhitelistManager = ({ provider }: WhitelistManagerProps) => {
     }
   }
 
-  const handleGetInfo = () => {
-    if (poolId) {
-      fetchPoolInfo(poolId)
-    }
-  }
-
   return (
     <Box maxW="800px" mx="auto">
       <Card mb={6}>

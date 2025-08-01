@@ -1,14 +1,12 @@
 import { Box, Flex, Button, Text } from '@chakra-ui/react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
-import { ethers } from 'ethers'
 
 interface NavbarProps {
-  provider: ethers.providers.Web3Provider | null
   account: string
   connectWallet: () => void
 }
 
-const Navbar = ({ provider, account, connectWallet }: NavbarProps) => {
+const Navbar = ({ account, connectWallet }: NavbarProps) => {
   const location = useLocation();
   return (
     <Box bg="white" px={4} shadow="sm">
@@ -35,6 +33,15 @@ const Navbar = ({ provider, account, connectWallet }: NavbarProps) => {
               size="sm"
             >
               管理资金池
+            </Button>
+            <Button
+              as={RouterLink}
+              to="/modify-pool"
+              colorScheme={location.pathname === '/modify-pool' ? 'teal' : 'gray'}
+              variant={location.pathname === '/modify-pool' ? 'solid' : 'ghost'}
+              size="sm"
+            >
+              修改资金池
             </Button>
             <Button
               as={RouterLink}

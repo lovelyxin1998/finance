@@ -42,10 +42,24 @@ export const LENDING_POOL_ABI = [
       { "internalType": "uint256", "name": "_poolId", "type": "uint256" },
       { "internalType": "uint256", "name": "_maxBorrowAmount", "type": "uint256" },
       { "internalType": "string", "name": "_name", "type": "string" },
-      { "internalType": "uint256", "name": "_creatorFeeRate", "type": "uint256" }
+      { "internalType": "uint256", "name": "_creatorFeeRate", "type": "uint256" },
+      { "internalType": "address", "name": "_borrowToken", "type": "address" }
     ],
     "name": "createPool",
     "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "_poolId", "type": "uint256" },
+      { "internalType": "uint256", "name": "_maxBorrowAmount", "type": "uint256" },
+      { "internalType": "string", "name": "_name", "type": "string" },
+      { "internalType": "uint256", "name": "_creatorFeeRate", "type": "uint256" },
+      { "internalType": "address", "name": "_borrowToken", "type": "address" }
+    ],
+    "name": "modifierPoolData",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -131,9 +145,14 @@ export const LENDING_POOL_ABI = [
               "internalType": "uint256",
               "name": "creatorFeeRate",
               "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "borrowToken",
+              "type": "address"
             }
           ],
-          "internalType": "struct IPancakeV3Factory.Pool",
+          "internalType": "struct LendingPool.Pool",
           "name": "pool",
           "type": "tuple"
         },
@@ -213,6 +232,57 @@ export const LENDING_POOL_ABI = [
       "name": "repay",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "", "type": "address" }
+      ],
+      "name": "userProxies",
+      "outputs": [
+        { "internalType": "address", "name": "", "type": "address" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "_poolId", "type": "uint256" }
+      ],
+      "name": "getBorrowersWithAmounts",
+      "outputs": [
+        { "internalType": "address[]", "name": "borrowers", "type": "address[]" },
+        { "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "name": "_poolExists",
+      "outputs": [
+        { "internalType": "bool", "name": "", "type": "bool" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "name": "pools",
+      "outputs": [
+        { "internalType": "address", "name": "creator", "type": "address" },
+        { "internalType": "uint256", "name": "maxBorrowAmount", "type": "uint256" },
+        { "internalType": "uint256", "name": "totalFunds", "type": "uint256" },
+        { "internalType": "uint256", "name": "totalBorrowed", "type": "uint256" },
+        { "internalType": "string", "name": "name", "type": "string" },
+        { "internalType": "uint256", "name": "creatorFeeRate", "type": "uint256" },
+        { "internalType": "address", "name": "borrowToken", "type": "address" }
+      ],
+      "stateMutability": "view",
       "type": "function"
     }
 ];

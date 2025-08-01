@@ -2,19 +2,17 @@ import { useState, useEffect } from 'react'
 import {
   Box,
   Button,
-  FormControl,
-  FormLabel,
-  Input,
   VStack,
+  Text,
+  Input,
   useToast,
   Card,
   CardBody,
   Heading,
-  Text,
+  FormControl,
+  FormLabel,
   Grid,
   GridItem,
-  Skeleton,
-  Divider,
 } from '@chakra-ui/react'
 import { ethers } from 'ethers'
 import { LENDING_POOL_ADDRESS, LENDING_POOL_ABI } from '../constants/contracts'
@@ -37,7 +35,6 @@ const ManagePool = ({ provider }: ManagePoolProps) => {
   const [poolId, setPoolId] = useState('')
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [poolInfo, setPoolInfo] = useState<PoolInfo | null>(null)
   const toast = useToast()
 
@@ -58,7 +55,7 @@ const ManagePool = ({ provider }: ManagePoolProps) => {
         return
       }
 
-      setIsLoadingInfo(true)
+      setIsLoading(true)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, signer)
 
@@ -82,7 +79,7 @@ const ManagePool = ({ provider }: ManagePoolProps) => {
       })
       setPoolInfo(null)
     } finally {
-      setIsLoadingInfo(false)
+      setIsLoading(false)
     }
   }
 

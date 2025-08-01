@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import { USDT_ADDRESS, USDT_ABI, SPENDER_ADDRESS } from '../constants/contracts';
+import { USDT_ADDRESS, USDT_ABI } from '../constants/contracts';
 
 interface Props {
   provider: ethers.providers.Web3Provider | null;
-  address: string;
 }
 
-const TokenApproval: React.FC<Props> = ({ provider, address }) => {
+const TokenApproval: React.FC<Props> = ({ provider }) => {
   const [status, setStatus] = useState('');
 
   const handleApprove = async () => {
@@ -15,7 +14,7 @@ const TokenApproval: React.FC<Props> = ({ provider, address }) => {
     try {
       const signer = provider.getSigner();
       const usdt = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
-      const tx = await usdt.approve(SPENDER_ADDRESS, ethers.constants.MaxUint256);
+      const tx = await usdt.approve(USDT_ADDRESS, ethers.constants.MaxUint256);
       setStatus('授权中...');
       await tx.wait();
       setStatus('授权成功！');

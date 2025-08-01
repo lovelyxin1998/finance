@@ -10,6 +10,13 @@ import {
   Text,
   useToast,
   VStack,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Badge,
 } from '@chakra-ui/react'
 import { ethers } from 'ethers'
 import { LENDING_POOL_ADDRESS, LENDING_POOL_ABI } from '../constants/contracts'
@@ -29,10 +36,17 @@ interface PoolInfo {
   addressListLength: string
 }
 
+interface BorrowerInfo {
+  address: string
+  amount: string
+}
+
 const UserBorrow = ({ provider }: UserBorrowProps) => {
   const [poolId, setPoolId] = useState<string>('')
   const [poolInfo, setPoolInfo] = useState<PoolInfo | null>(null)
+  const [borrowers, setBorrowers] = useState<BorrowerInfo[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoadingBorrowers, setIsLoadingBorrowers] = useState<boolean>(false)
   const toast = useToast()
 
   // 获取用户的资金池ID
@@ -63,6 +77,7 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
       // 如果ID不为0，获取资金池信息
       if (id.toString() !== '0') {
         await fetchPoolInfo(id.toString())
+        await fetchBorrowers(id.toString())
       }
     } catch (error) {
       console.error('获取用户资金池ID失败:', error)
@@ -107,6 +122,97 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
         duration: 3000,
         isClosable: true,
       })
+    }
+  }
+
+  // 获取借款人信息
+  const fetchBorrowers = async (id: string) => {
+    if (!provider) return
+
+    try {
+      setIsLoadingBorrowers(true)
+      const signer = provider.getSigner()
+      const contract = new ethers.Contract(
+        LENDING_POOL_ADDRESS,
+        LENDING_POOL_ABI,
+        signer
+      )
+
+      console.log('=== 调试信息 ===')
+      console.log('合约地址:', LENDING_POOL_ADDRESS)
+      console.log('网络信息:', await provider.getNetwork())
+      console.log('当前账户:', await signer.getAddress())
+      console.log('正在获取借款人信息，池ID:', id)
+      
+      // 先测试合约连接
+      try {
+        const poolExists = await contract._poolExists(id)
+        console.log('资金池是否存在:', poolExists)
+        
+        if (!poolExists) {
+          console.log('资金池不存在，跳过获取借款人信息')
+          setBorrowers([])
+          return
+        }
+        
+        // 测试直接查询资金池信息
+        const poolInfo = await contract.pools(id)
+        console.log('直接查询的资金池信息:', poolInfo)
+        
+      } catch (error) {
+        console.log('检查资金池存在性失败:', error)
+      }
+      
+      console.log('开始调用 getBorrowersWithAmounts...')
+      const [borrowerAddresses, borrowerAmounts] = await contract.getBorrowersWithAmounts(id)
+      
+      console.log('原始借款人地址:', borrowerAddresses)
+      console.log('原始借款金额:', borrowerAmounts)
+      console.log('借款人地址数量:', borrowerAddresses.length)
+      console.log('借款金额数量:', borrowerAmounts.length)
+      
+      if (borrowerAddresses.length === 0) {
+        console.log('没有找到借款人')
+        setBorrowers([])
+        return
+      }
+      
+      const borrowersList: BorrowerInfo[] = borrowerAddresses.map((address: string, index: number) => {
+        const amount = ethers.utils.formatUnits(borrowerAmounts[index], 18)
+        console.log(`借款人 ${index + 1}:`, { address, amount })
+        return {
+          address,
+          amount
+        }
+      })
+
+      console.log('处理后的借款人列表:', borrowersList)
+      setBorrowers(borrowersList)
+    } catch (error) {
+      console.error('获取借款人信息失败:', error)
+      console.error('错误详情:', {
+        message: error instanceof Error ? error.message : '未知错误',
+        code: (error as any).code,
+        data: (error as any).data,
+        transaction: (error as any).transaction
+      })
+      toast({
+        title: '错误',
+        description: `获取借款人信息失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      setBorrowers([])
+    } finally {
+      setIsLoadingBorrowers(false)
+    }
+  }
+
+  // 刷新借款人信息
+  const handleRefreshBorrowers = async () => {
+    if (poolId && poolId !== '0') {
+      await fetchBorrowers(poolId)
     }
   }
 
@@ -168,8 +274,9 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
         isClosable: true,
       })
 
-      // 刷新资金池信息
+      // 刷新资金池信息和借款人信息
       await fetchPoolInfo(poolId)
+      await fetchBorrowers(poolId)
     } catch (error: any) {
       console.error('借款失败:', error)
       let errorMessage = '借款失败'
@@ -253,8 +360,9 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
         isClosable: true,
       })
 
-      // 刷新资金池信息
+      // 刷新资金池信息和借款人信息
       await fetchPoolInfo(poolId)
+      await fetchBorrowers(poolId)
     } catch (error: any) {
       console.error('还款失败:', error)
       let errorMessage = '还款失败'
@@ -336,6 +444,68 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
                     <Text>{poolInfo.totalFunds} USDT</Text>
                   </GridItem>
                 </Grid>
+              </VStack>
+            </CardBody>
+          </Card>
+        )}
+
+        {/* 借款人列表 */}
+        {poolId !== '0' && (
+          <Card>
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Heading size="md">借款人列表</Heading>
+                  <Button
+                    size="sm"
+                    onClick={handleRefreshBorrowers}
+                    isLoading={isLoadingBorrowers}
+                  >
+                    刷新
+                  </Button>
+                </Box>
+                
+                {/* 调试信息 */}
+                <Box p={2} bg="gray.100" borderRadius="md">
+                  <Text fontSize="sm" color="gray.600">
+                    调试信息: 借款人数量 = {borrowers.length}, 加载状态 = {isLoadingBorrowers ? 'true' : 'false'}
+                  </Text>
+                </Box>
+                
+                {isLoadingBorrowers ? (
+                  <Text>加载中...</Text>
+                ) : borrowers.length > 0 ? (
+                  <Box overflowX="auto">
+                    <Table variant="simple" size="sm">
+                      <Thead>
+                        <Tr>
+                          <Th>序号</Th>
+                          <Th>借款人地址</Th>
+                          <Th>借款金额 (USDT)</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {borrowers.map((borrower, index) => (
+                          <Tr key={`${borrower.address}-${index}`}>
+                            <Td>{index + 1}</Td>
+                            <Td>
+                              <Text fontSize="sm" fontFamily="mono">
+                                {borrower.address.slice(0, 6)}...{borrower.address.slice(-4)}
+                              </Text>
+                            </Td>
+                            <Td>
+                              <Badge colorScheme="blue">
+                                {parseFloat(borrower.amount).toFixed(2)}
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                ) : (
+                  <Text color="gray.500">暂无借款人</Text>
+                )}
               </VStack>
             </CardBody>
           </Card>
