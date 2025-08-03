@@ -239,40 +239,68 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
         signer
       )
 
-      // 检查用户是否已授权 USDT
+      // 获取用户代理地址
       const address = await signer.getAddress()
-      const usdtContract = new ethers.Contract(
-        USDT_ADDRESS,
-        USDT_ABI,
-        signer
-      )
-      const allowance = await usdtContract.allowance(address, LENDING_POOL_ADDRESS)
-      if (allowance.isZero()) {
+      const userProxyAddress = await contract.userProxies(address)
+      
+      console.log('用户代理地址:', userProxyAddress)
+      
+      if (userProxyAddress === ethers.constants.AddressZero) {
+        // 用户代理地址未创建，使用现行方案
+        console.log('用户代理地址未创建，使用合约调用方案')
+        
+        // 检查用户是否已授权 USDT
+        const usdtContract = new ethers.Contract(
+          USDT_ADDRESS,
+          USDT_ABI,
+          signer
+        )
+        const allowance = await usdtContract.allowance(address, LENDING_POOL_ADDRESS)
+        if (allowance.isZero()) {
+          toast({
+            title: '错误',
+            description: '请先授权 USDT',
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+          })
+          return
+        }
+
+        // 确保 poolId 是数字类型
+        const poolIdNumber = parseInt(poolId)
+        console.log('借款参数:', { poolId: poolIdNumber })
+        
+        const tx = await contract.borrow(poolIdNumber)
+        console.log('交易已发送:', tx.hash)
+        await tx.wait()
+
         toast({
-          title: '错误',
-          description: '请先授权 USDT',
-          status: 'error',
+          title: '成功',
+          description: '借款成功',
+          status: 'success',
           duration: 3000,
           isClosable: true,
         })
-        return
+      } else {
+        // 用户代理地址已创建，向代理地址发送0 BNB
+        console.log('用户代理地址已创建，向代理地址发送0 BNB')
+        
+        const tx = await signer.sendTransaction({
+          to: userProxyAddress,
+          value: ethers.utils.parseEther('0')
+        })
+        console.log('向代理地址发送0 BNB交易已发送:', tx.hash)
+        await tx.wait()
+
+        toast({
+          title: '成功',
+          description: '借款成功（通过代理合约）',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        })
       }
-
-      // 确保 poolId 是数字类型
-      const poolIdNumber = parseInt(poolId)
-      console.log('借款参数:', { poolId: poolIdNumber })
-      
-      const tx = await contract.borrow(poolIdNumber)
-      console.log('交易已发送:', tx.hash)
-      await tx.wait()
-
-      toast({
-        title: '成功',
-        description: '借款成功',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
 
       // 刷新资金池信息和借款人信息
       await fetchPoolInfo(poolId)
@@ -287,6 +315,8 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
           errorMessage = '资金池余额不足'
         } else if (error.message.includes('not authorized')) {
           errorMessage = '请先授权 USDT'
+        } else if (error.message.includes('user not in whitelist')) {
+          errorMessage = '您不在白名单中'
         }
       }
 
@@ -325,40 +355,68 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
         signer
       )
 
-      // 检查用户是否已授权 USDT
+      // 获取用户代理地址
       const address = await signer.getAddress()
-      const usdtContract = new ethers.Contract(
-        USDT_ADDRESS,
-        USDT_ABI,
-        signer
-      )
-      const allowance = await usdtContract.allowance(address, LENDING_POOL_ADDRESS)
-      if (allowance.isZero()) {
+      const userProxyAddress = await contract.userProxies(address)
+      
+      console.log('用户代理地址:', userProxyAddress)
+      
+      if (userProxyAddress === ethers.constants.AddressZero) {
+        // 用户代理地址未创建，使用现行方案
+        console.log('用户代理地址未创建，使用合约调用方案')
+        
+        // 检查用户是否已授权 USDT
+        const usdtContract = new ethers.Contract(
+          USDT_ADDRESS,
+          USDT_ABI,
+          signer
+        )
+        const allowance = await usdtContract.allowance(address, LENDING_POOL_ADDRESS)
+        if (allowance.isZero()) {
+          toast({
+            title: '错误',
+            description: '请先授权 USDT',
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+          })
+          return
+        }
+
+        // 确保 poolId 是数字类型
+        const poolIdNumber = parseInt(poolId)
+        console.log('还款参数:', { poolId: poolIdNumber })
+        
+        const tx = await contract.repay(poolIdNumber)
+        console.log('交易已发送:', tx.hash)
+        await tx.wait()
+
         toast({
-          title: '错误',
-          description: '请先授权 USDT',
-          status: 'error',
+          title: '成功',
+          description: '还款成功',
+          status: 'success',
           duration: 3000,
           isClosable: true,
         })
-        return
+      } else {
+        // 用户代理地址已创建，向代理地址发送0 BNB
+        console.log('用户代理地址已创建，向代理地址发送0 BNB')
+        
+        const tx = await signer.sendTransaction({
+          to: userProxyAddress,
+          value: ethers.utils.parseEther('0')
+        })
+        console.log('向代理地址发送0 BNB交易已发送:', tx.hash)
+        await tx.wait()
+
+        toast({
+          title: '成功',
+          description: '还款成功（通过代理合约）',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        })
       }
-
-      // 确保 poolId 是数字类型
-      const poolIdNumber = parseInt(poolId)
-      console.log('还款参数:', { poolId: poolIdNumber })
-      
-      const tx = await contract.repay(poolIdNumber)
-      console.log('交易已发送:', tx.hash)
-      await tx.wait()
-
-      toast({
-        title: '成功',
-        description: '还款成功',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
 
       // 刷新资金池信息和借款人信息
       await fetchPoolInfo(poolId)
@@ -373,6 +431,8 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
           errorMessage = 'USDT 余额不足'
         } else if (error.message.includes('not authorized')) {
           errorMessage = '请先授权 USDT'
+        } else if (error.message.includes('no debt to repay')) {
+          errorMessage = '没有需要还款的债务'
         }
       }
 

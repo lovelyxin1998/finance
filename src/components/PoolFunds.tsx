@@ -29,7 +29,7 @@ const PoolFunds: React.FC<Props> = ({ provider }) => {
     
     try {
       const contract = new ethers.Contract(LENDING_POOL_ADDRESS, LENDING_POOL_ABI, provider);
-      const [pool, addressListLength] = await contract.getPoolInfo(id);
+      const [pool] = await contract.getPoolInfo(id);
       setPoolInfo(pool);
     } catch (error) {
       console.error('获取资金池信息失败:', error);
