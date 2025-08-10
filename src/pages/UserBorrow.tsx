@@ -71,23 +71,56 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
       )
 
       const address = await signer.getAddress()
+      console.log('正在获取用户资金池ID，地址:', address)
+      
       const id = await contract.userPoolId(address)
+      console.log('获取到的资金池ID:', id.toString())
+      
       setPoolId(id.toString())
 
       // 如果ID不为0，获取资金池信息
       if (id.toString() !== '0') {
+        console.log('资金池ID有效，开始获取详细信息...')
         await fetchPoolInfo(id.toString())
         await fetchBorrowers(id.toString())
+      } else {
+        console.log('用户未加入资金池')
+        // 清空相关状态
+        setPoolInfo(null)
+        setBorrowers([])
       }
     } catch (error) {
       console.error('获取用户资金池ID失败:', error)
+      
+      // 根据错误类型提供不同的处理建议
+      let errorMessage = '获取用户资金池ID失败'
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage = '网络连接失败，请检查网络状态'
+        } else if (error.message.includes('user rejected')) {
+          errorMessage = '用户拒绝了交易请求'
+        } else if (error.message.includes('insufficient funds')) {
+          errorMessage = '钱包余额不足'
+        }
+      }
+      
       toast({
         title: '错误',
-        description: '获取用户资金池ID失败',
+        description: errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       })
+      
+      // 如果是网络错误，延迟重试
+      if (error instanceof Error && error.message.includes('network')) {
+        setTimeout(() => {
+          if (provider) {
+            console.log('网络错误，延迟重试...')
+            fetchUserPoolId()
+          }
+        }, 3000)
+      }
     }
   }
 
@@ -450,30 +483,182 @@ const UserBorrow = ({ provider }: UserBorrowProps) => {
 
   // 组件加载时获取用户资金池ID
   useEffect(() => {
-    fetchUserPoolId()
+    if (provider) {
+      fetchUserPoolId()
+    }
+  }, [provider])
+
+  // 当 poolId 变化时，重新获取相关数据
+  useEffect(() => {
+    if (provider && poolId && poolId !== '0') {
+      fetchPoolInfo(poolId)
+      fetchBorrowers(poolId)
+    }
+  }, [provider, poolId])
+
+  // 添加重试机制：当 provider 连接后，延迟重试获取数据
+  useEffect(() => {
+    if (provider) {
+      // 延迟重试，确保钱包完全连接
+      const timer = setTimeout(() => {
+        if (poolId === '0' || !poolInfo) {
+          fetchUserPoolId()
+        }
+      }, 1000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [provider])
+
+  // 添加错误重试机制
+  const retryFetch = async () => {
+    if (provider) {
+      try {
+        await fetchUserPoolId()
+      } catch (error) {
+        console.error('重试获取数据失败:', error)
+        // 如果重试失败，再次延迟重试
+        setTimeout(() => {
+          if (provider) {
+            fetchUserPoolId()
+          }
+        }, 2000)
+      }
+    }
+  }
+
+  // 当 provider 状态变化时，重置相关状态
+  useEffect(() => {
+    if (!provider) {
+      setPoolId('')
+      setPoolInfo(null)
+      setBorrowers([])
+    }
+  }, [provider])
+
+  // 监听网络状态变化
+  useEffect(() => {
+    if (provider) {
+      const handleNetworkChange = () => {
+        console.log('网络状态发生变化，重新获取数据...')
+        // 延迟重试，确保网络稳定
+        setTimeout(() => {
+          if (provider) {
+            fetchUserPoolId()
+          }
+        }, 2000)
+      }
+
+      // 监听账户变化
+      const handleAccountsChanged = (accounts: string[]) => {
+        console.log('账户发生变化:', accounts)
+        if (accounts.length > 0) {
+          // 账户变化后重新获取数据
+          setTimeout(() => {
+            if (provider) {
+              fetchUserPoolId()
+            }
+          }, 1000)
+        } else {
+          // 账户断开连接
+          setPoolId('')
+          setPoolInfo(null)
+          setBorrowers([])
+        }
+      }
+
+      // 监听链变化
+      const handleChainChanged = () => {
+        console.log('链发生变化，重新获取数据...')
+        setTimeout(() => {
+          if (provider) {
+            fetchUserPoolId()
+          }
+        }, 2000)
+      }
+
+      // 添加事件监听器
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', handleAccountsChanged)
+        window.ethereum.on('chainChanged', handleChainChanged)
+        window.ethereum.on('networkChanged', handleNetworkChange)
+      }
+
+      // 清理函数
+      return () => {
+        if (window.ethereum) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+          window.ethereum.removeListener('chainChanged', handleChainChanged)
+          window.ethereum.removeListener('networkChanged', handleNetworkChange)
+        }
+      }
+    }
   }, [provider])
 
   return (
     <Box p={4}>
       <VStack spacing={6} align="stretch">
+        {/* 全局刷新和状态区域 */}
         <Card>
           <CardBody>
             <VStack spacing={4} align="stretch">
-              <Heading size="md">我的资金池</Heading>
-              {poolId === '0' ? (
-                <Text color="red.500">您还没有加入任何资金池</Text>
-              ) : (
-                <Text>资金池ID: {poolId}</Text>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Heading size="md">借款还款管理</Heading>
+                <Button
+                  colorScheme="blue"
+                  onClick={retryFetch}
+                  isLoading={isLoading}
+                  size="sm"
+                >
+                  全局刷新
+                </Button>
+              </Box>
+              {provider && (
+                <Text fontSize="sm" color="gray.600">
+                  钱包已连接，网络状态正常
+                </Text>
               )}
             </VStack>
           </CardBody>
         </Card>
 
+        {poolId !== '0' && (
+          <Card>
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <Heading size="md">我的资金池</Heading>
+                {poolId === '0' ? (
+                  <Text color="red.500">您还没有加入任何资金池</Text>
+                ) : (
+                  <Text>资金池ID: {poolId}</Text>
+                )}
+                {!poolInfo && poolId !== '0' && (
+                  <Text color="blue.500">正在加载资金池信息...</Text>
+                )}
+              </VStack>
+            </CardBody>
+          </Card>
+        )}
+
         {poolInfo && (
           <Card>
             <CardBody>
               <VStack spacing={4} align="stretch">
-                <Heading size="md">资金池信息</Heading>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Heading size="md">资金池信息</Heading>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (poolId && poolId !== '0') {
+                        fetchPoolInfo(poolId)
+                        fetchBorrowers(poolId)
+                      }
+                    }}
+                    isLoading={isLoading}
+                  >
+                    刷新信息
+                  </Button>
+                </Box>
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                   <GridItem>
                     <Text fontWeight="medium">名称</Text>
