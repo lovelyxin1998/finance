@@ -62,6 +62,33 @@ const Navbar = ({ account, connectWallet }: NavbarProps) => {
             >
               白名单管理
             </Button>
+            <Button
+              as={RouterLink}
+              to="/query-data"
+              colorScheme={location.pathname === '/query-data' ? 'teal' : 'gray'}
+              variant={location.pathname === '/query-data' ? 'solid' : 'ghost'}
+              size="sm"
+            >
+              奖励查询
+            </Button>
+            <Button
+              as={RouterLink}
+              to="/claim-rewards"
+              colorScheme={location.pathname === '/claim-rewards' ? 'teal' : 'gray'}
+              variant={location.pathname === '/claim-rewards' ? 'solid' : 'ghost'}
+              size="sm"
+            >
+              领取奖励
+            </Button>
+            <Button
+              as={RouterLink}
+              to="/submit-address"
+              colorScheme={location.pathname === '/submit-address' ? 'teal' : 'gray'}
+              variant={location.pathname === '/submit-address' ? 'solid' : 'ghost'}
+              size="sm"
+            >
+              提交地址
+            </Button>
           </Flex>
         </Flex>
         <Flex alignItems="center" gap={4}>

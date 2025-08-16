@@ -6,6 +6,9 @@ export const USD1_ADDRESS = '0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d'; // 请
 
 export const LENDING_POOL_ADDRESS = '0xeB76547574aCF7b4c67FDF96B6c67DfD722e658F'; // 请替换为 BSC 上你的合约地址
 
+// 奖励合约地址
+export const REWARD_CONTRACT_ADDRESS = '0x4201E0e98Fa3B33483FCd009149b390302760D67';
+
 export const USDT_ABI = [
   {
     "constant": true,
@@ -257,6 +260,27 @@ export const LENDING_POOL_ABI = [
       "stateMutability": "view",
       "type": "function"
     },
+  {
+    "inputs": [
+      { "internalType": "bytes[]", "name": "data", "type": "bytes[]" }
+    ],
+    "name": "verifyMulti",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "", "type": "address" },
+      { "internalType": "string", "name": "", "type": "string" }
+    ],
+    "name": "userRefunds",
+    "outputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
     {
       "inputs": [
         { "internalType": "uint256", "name": "", "type": "uint256" }

@@ -10,6 +10,9 @@ import PoolFunds from './components/PoolFunds';
 import ManagePool from './pages/ManagePool';
 import WhitelistManager from './pages/WhitelistManager';
 import UserBorrow from './pages/UserBorrow';
+import QueryData from './pages/QueryData';
+import ClaimRewards from './pages/ClaimRewards';
+import SubmitAddress from './pages/SubmitAddress';
 import Authorize from './pages/Authorize';
 import { TOKENS, LENDING_POOL_ADDRESS } from './constants/contracts';
 
@@ -196,12 +199,48 @@ const App = () => {
               }
             />
             <Route
+              path="/query-data"
+              element={
+                !provider || !account ? (
+                  <Navigate to="/" replace />
+                ) : !isAuthorized ? (
+                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                ) : (
+                  <QueryData />
+                )
+              }
+            />
+            <Route
+              path="/claim-rewards"
+              element={
+                !provider || !account ? (
+                  <Navigate to="/" replace />
+                ) : !isAuthorized ? (
+                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                ) : (
+                  <ClaimRewards provider={provider} account={account} />
+                )
+              }
+            />
+            <Route
               path="/authorize"
               element={
                 !provider || !account ? (
                   <Navigate to="/" replace />
                 ) : (
                   <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                )
+              }
+            />
+            <Route
+              path="/submit-address"
+              element={
+                !provider || !account ? (
+                  <Navigate to="/" replace />
+                ) : !isAuthorized ? (
+                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                ) : (
+                  <SubmitAddress account={account} />
                 )
               }
             />
