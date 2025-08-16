@@ -44,8 +44,6 @@ const SubmitAddress = ({ account }: SubmitAddressProps) => {
   const [error, setError] = useState('')
   const toast = useToast()
 
-  const API_BASE_URL = 'http://144.76.71.189:39903'
-
   // 在页面顶部显示当前钱包地址
   const displayAddress = account ? `${account.slice(0, 8)}...${account.slice(-6)}` : '未连接'
 
@@ -97,7 +95,7 @@ const SubmitAddress = ({ account }: SubmitAddressProps) => {
     setSubmitResult(null)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/invite`, {
+      const response = await fetch('/api/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +164,7 @@ const SubmitAddress = ({ account }: SubmitAddressProps) => {
         query = `addresses=${addressList.map(a => encodeURIComponent(a)).join(',')}`
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/check?${query}`)
+      const response = await fetch(`/api/check?${query}`)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

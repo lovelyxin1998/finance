@@ -68,7 +68,7 @@ const ClaimRewards = ({ provider, account }: ClaimRewardsProps) => {
     setError('')
 
     try {
-      const response = await fetch('http://144.76.71.189:39903/api/query', {
+      const response = await fetch('/api/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
