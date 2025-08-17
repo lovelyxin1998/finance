@@ -170,8 +170,9 @@ const ClaimRewards = ({ provider, account }: ClaimRewardsProps) => {
       
       if (total.isZero()) return '0.00%'
       
-      // 入池率 = (有效金额 / 总买入金额) * 100%
-      const rate = effective.mul(100).div(total)
+      // 入池率 = (有效金额 / (总买入金额 * 2)) * 100%
+      // 因为有效金额包含了买入和卖出的总和
+      const rate = effective.mul(100).div(total.mul(2))
       const ratePercent = rate.toNumber()
       
       // 限制最大值为100%
