@@ -103,6 +103,16 @@ const ClaimRewards = ({ provider, account }: ClaimRewardsProps) => {
       // 为每条记录添加退款状态
       const dataWithRefundStatus = await Promise.all(
         validData.map(async (item: ClaimDataItem) => {
+          // 如果 deal_status 不为 0，说明一定已返还
+          if (item.deal_status !== 0) {
+            return {
+              ...item,
+              hasRefund: true,
+              refundAmount: '0' // 这里可以设置为实际返还金额，但 deal_status 已经表明状态
+            }
+          }
+          
+          // 只有当 deal_status 为 0 时，才查询链上数据确认是否真的已返还
           try {
             const refundAmount = await contract.userRefunds(account, item.day)
             const hasRefund = refundAmount.gt(0)
