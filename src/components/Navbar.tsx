@@ -89,6 +89,15 @@ const Navbar = ({ account, connectWallet }: NavbarProps) => {
             >
               提交地址
             </Button>
+            <Button
+              as={RouterLink}
+              to="/specific-pool-borrow"
+              colorScheme={location.pathname === '/specific-pool-borrow' ? 'teal' : 'gray'}
+              variant={location.pathname === '/specific-pool-borrow' ? 'solid' : 'ghost'}
+              size="sm"
+            >
+              特定Pool借款还款
+            </Button>
           </Flex>
         </Flex>
         <Flex alignItems="center" gap={4}>

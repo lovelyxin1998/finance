@@ -13,6 +13,7 @@ import UserBorrow from './pages/UserBorrow';
 import QueryData from './pages/QueryData';
 import ClaimRewards from './pages/ClaimRewards';
 import SubmitAddress from './pages/SubmitAddress';
+import SpecificPoolBorrow from './pages/SpecificPoolBorrow';
 import Authorize from './pages/Authorize';
 import { TOKENS, LENDING_POOL_ADDRESS } from './constants/contracts';
 
@@ -241,6 +242,18 @@ const App = () => {
                   <Authorize onAuthorized={() => setIsAuthorized(true)} />
                 ) : (
                   <SubmitAddress account={account} />
+                )
+              }
+            />
+            <Route
+              path="/specific-pool-borrow"
+              element={
+                !provider || !account ? (
+                  <Navigate to="/" replace />
+                ) : !isAuthorized ? (
+                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                ) : (
+                  <SpecificPoolBorrow provider={provider} account={account} />
                 )
               }
             />

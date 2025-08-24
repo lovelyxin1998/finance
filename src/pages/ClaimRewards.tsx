@@ -172,7 +172,12 @@ const ClaimRewards = ({ provider, account }: ClaimRewardsProps) => {
 
   // 计算入池率
   const calculateRate = (effectiveValue: string, totalValue: string): string => {
-    if (!totalValue || totalValue === '0') return '0.00%'
+    // 检查输入值是否有效
+    if (!effectiveValue || !totalValue || 
+        effectiveValue === '' || totalValue === '' || 
+        effectiveValue === '0' || totalValue === '0') {
+      return '0.00%'
+    }
     
     try {
       const effective = ethers.BigNumber.from(effectiveValue)
@@ -189,7 +194,7 @@ const ClaimRewards = ({ provider, account }: ClaimRewardsProps) => {
       const finalRate = Math.min(ratePercent, 100)
       return `${finalRate.toFixed(2)}%`
     } catch (error) {
-      console.error('计算入池率失败:', error)
+      console.error('计算入池率失败:', error, 'effectiveValue:', effectiveValue, 'totalValue:', totalValue)
       return '0.00%'
     }
   }

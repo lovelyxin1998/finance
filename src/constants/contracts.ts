@@ -294,6 +294,18 @@ export const LENDING_POOL_ABI = [
     },
     {
       "inputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" },
+        { "internalType": "address", "name": "", "type": "address" }
+      ],
+      "name": "whitelist",
+      "outputs": [
+        { "internalType": "bool", "name": "", "type": "bool" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
         { "internalType": "uint256", "name": "", "type": "uint256" }
       ],
       "name": "pools",
