@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import {
   AlertIcon,
 } from '@chakra-ui/react'
 import { ethers } from 'ethers'
+import { LENDING_POOL_ABI, REWARD_CONTRACT_ADDRESS } from '../constants/contracts'
 
 interface QueryDataItem {
   id: number
@@ -39,17 +40,29 @@ interface QueryDataItem {
   created_at: string
   sign: string
   day: string
+  hasRefund?: boolean
+  refundAmount?: string
 }
 
 interface QueryDataProps {
+  provider: any
+  account: string
 }
 
-const QueryData = ({}: QueryDataProps) => {
+const QueryData = ({ provider, account }: QueryDataProps) => {
   const [addresses, setAddresses] = useState('')
   const [queryData, setQueryData] = useState<QueryDataItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isClaiming, setIsClaiming] = useState(false)
   const [error, setError] = useState('')
   const toast = useToast()
+
+  // 组件加载时自动将当前钱包地址填入查询框
+  useEffect(() => {
+    if (account) {
+      setAddresses(account)
+    }
+  }, [account])
 
   // 处理地址输入，支持多行输入
   const handleAddressesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -139,18 +152,90 @@ const QueryData = ({}: QueryDataProps) => {
       const data = await response.json()
       console.log('查询结果:', data)
       
+      // 过滤出有效的记录（sign不为空）
+      const validData = data.filter((item: QueryDataItem) => 
+        item.sign && item.sign !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+      )
+      
+      console.log('过滤后的有效数据:', validData)
+      
+      // 检查每条记录在合约中的退款状态（仅当provider和account存在时）
+      let dataWithRefundStatus = validData
+      if (provider && account) {
+        try {
+          const signer = provider.getSigner()
+          const contract = new ethers.Contract(
+            REWARD_CONTRACT_ADDRESS,
+            LENDING_POOL_ABI,
+            signer
+          )
+
+          // 为每条记录添加退款状态
+          dataWithRefundStatus = await Promise.all(
+            validData.map(async (item: QueryDataItem) => {
+              // 如果 deal_status 不为 0，说明一定已返还
+              if (item.deal_status !== 0) {
+                return {
+                  ...item,
+                  hasRefund: true,
+                  refundAmount: '0'
+                }
+              }
+              
+              // 只有当 deal_status 为 0 时，才查询链上数据确认是否真的已返还
+              try {
+                const refundAmount = await contract.userRefunds(account, item.day)
+                const hasRefund = refundAmount.gt(0)
+                return {
+                  ...item,
+                  hasRefund,
+                  refundAmount: refundAmount.toString()
+                }
+              } catch (error) {
+                console.error(`查询退款状态失败 ${item.day}:`, error)
+                return {
+                  ...item,
+                  hasRefund: false,
+                  refundAmount: '0'
+                }
+              }
+            })
+          )
+        } catch (error) {
+          console.error('查询退款状态失败:', error)
+          // 如果查询失败，仍然显示数据但不包含退款状态
+          dataWithRefundStatus = validData.map((item: QueryDataItem) => ({
+            ...item,
+            hasRefund: false,
+            refundAmount: '0'
+          }))
+        }
+      } else {
+        // 如果没有provider和account，则不显示退款状态
+        dataWithRefundStatus = validData.map((item: QueryDataItem) => ({
+          ...item,
+          hasRefund: false,
+          refundAmount: '0'
+        }))
+      }
+      
+      console.log('添加退款状态后的数据:', dataWithRefundStatus)
+      
       // 按照日期倒序排序
-      const sortedData = data.sort((a: QueryDataItem, b: QueryDataItem) => {
+      const sortedData = dataWithRefundStatus.sort((a: any, b: any) => {
         const dateA = new Date(a.day)
         const dateB = new Date(b.day)
-        return dateB.getTime() - dateA.getTime() // 倒序：最新的日期在前
+        return dateB.getTime() - dateA.getTime()
       })
       
       setQueryData(sortedData)
 
+      // 统计未领取的记录数
+      const unclaimedCount = sortedData.filter((item: any) => !item.hasRefund).length
+
       toast({
         title: '成功',
-        description: `成功查询到 ${data.length} 条数据`,
+        description: `成功查询到 ${sortedData.length} 条有效记录，其中 ${unclaimedCount} 条未领取`,
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -169,6 +254,118 @@ const QueryData = ({}: QueryDataProps) => {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // 领取所有未返还的费用
+  const handleClaimAll = async () => {
+    if (!provider || !account) {
+      toast({
+        title: '错误',
+        description: '请先连接钱包',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+
+    if (queryData.length === 0) {
+      toast({
+        title: '提示',
+        description: '没有可领取的奖励',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+
+    setIsClaiming(true)
+
+    try {
+      console.log('开始领取奖励...')
+      console.log('领取地址:', account)
+      console.log('领取数据:', queryData)
+      
+      // 获取所有未退款的 sign 数据
+      const validSigns = queryData
+        .filter(item => !item.hasRefund && item.sign && item.sign !== '0x0000000000000000000000000000000000000000000000000000000000000000')
+        .map(item => item.sign)
+      
+      if (validSigns.length === 0) {
+        toast({
+          title: '提示',
+          description: '没有有效的签名数据可领取',
+          status: 'info',
+          duration: 3000,
+          isClosable: true,
+        })
+        return
+      }
+
+      console.log('有效的签名数据:', validSigns)
+      
+      // 调用智能合约的 verifyMulti 接口
+      const signer = provider.getSigner()
+      const contract = new ethers.Contract(
+        REWARD_CONTRACT_ADDRESS,
+        LENDING_POOL_ABI,
+        signer
+      )
+
+      console.log('调用 verifyMulti 接口...')
+      const tx = await contract.verifyMulti(validSigns)
+      console.log('交易已发送:', tx.hash)
+      
+      toast({
+        title: '交易已发送',
+        description: `交易哈希: ${tx.hash.slice(0, 8)}...${tx.hash.slice(-6)}`,
+        status: 'info',
+        duration: 5000,
+        isClosable: true,
+      })
+
+      // 等待交易确认
+      await tx.wait()
+      console.log('交易已确认')
+      
+      toast({
+        title: '领取成功',
+        description: `成功领取 ${validSigns.length} 条记录的奖励`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+
+      // 领取成功后刷新数据
+      await handleQuery()
+      
+    } catch (error) {
+      console.error('领取失败:', error)
+      let errorMessage = '领取失败'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('user rejected')) {
+          errorMessage = '用户拒绝了交易请求'
+        } else if (error.message.includes('insufficient funds')) {
+          errorMessage = '钱包余额不足支付gas费用'
+        } else if (error.message.includes('execution reverted')) {
+          errorMessage = '合约执行失败，请检查签名数据'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      toast({
+        title: '错误',
+        description: errorMessage,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    } finally {
+      setIsClaiming(false)
     }
   }
 
@@ -198,7 +395,10 @@ const QueryData = ({}: QueryDataProps) => {
         <Card>
           <CardBody>
             <VStack spacing={{ base: 3, md: 4 }} align="stretch">
-              <Heading size={{ base: "sm", md: "md" }}>奖励查询</Heading>
+              <Heading size={{ base: "sm", md: "md" }}>奖励查询与领取</Heading>
+              <Text fontSize={{ base: "xs", md: "sm" }} color="gray.600">
+                当前钱包地址: {account ? `${account.slice(0, 8)}...${account.slice(-6)}` : '未连接'}
+              </Text>
               <FormControl>
                 <FormLabel fontSize={{ base: "sm", md: "md" }}>以太坊地址列表（每行一个地址）</FormLabel>
                 <Textarea
@@ -221,6 +421,17 @@ const QueryData = ({}: QueryDataProps) => {
                   flex={{ base: "1", md: "auto" }}
                 >
                   查询数据
+                </Button>
+                <Button
+                  colorScheme="green"
+                  onClick={handleClaimAll}
+                  isLoading={isClaiming}
+                  loadingText="领取中..."
+                  size={{ base: "sm", md: "md" }}
+                  flex={{ base: "1", md: "auto" }}
+                  isDisabled={queryData.length === 0 || isLoading || !provider || !account}
+                >
+                  领取所有奖励
                 </Button>
                 <Button
                   colorScheme="gray"
@@ -251,7 +462,7 @@ const QueryData = ({}: QueryDataProps) => {
               <VStack spacing={{ base: 3, md: 4 }} align="stretch">
                 <Heading size={{ base: "sm", md: "md" }}>查询结果</Heading>
                 <Text fontSize={{ base: "xs", md: "sm" }} color="gray.600">
-                  共找到 {queryData.length} 条数据
+                  共找到 {queryData.length} 条有效记录，其中 {queryData.filter((item: QueryDataItem) => !item.hasRefund).length} 条未领取
                 </Text>
                 
                 <Box overflowX="auto" maxW="100%">
@@ -264,6 +475,7 @@ const QueryData = ({}: QueryDataProps) => {
                         <Th fontSize={{ base: "xs", md: "sm" }}>有效数量</Th>
                         <Th fontSize={{ base: "xs", md: "sm" }}>返还金额</Th>
                         <Th fontSize={{ base: "xs", md: "sm" }}>入池率</Th>
+                        <Th fontSize={{ base: "xs", md: "sm" }}>是否返还</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
@@ -304,6 +516,14 @@ const QueryData = ({}: QueryDataProps) => {
                               fontSize={{ base: "xs", md: "sm" }}
                             >
                               {calculateRate(item.effective_usd_value, item.total_usd_value)}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Badge 
+                              colorScheme={item.hasRefund ? 'green' : 'red'} 
+                              fontSize={{ base: "xs", md: "sm" }}
+                            >
+                              {item.hasRefund ? '已返还' : '未返还'}
                             </Badge>
                           </Td>
                         </Tr>

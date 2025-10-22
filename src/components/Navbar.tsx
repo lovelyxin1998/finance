@@ -64,21 +64,21 @@ const Navbar = ({ account, connectWallet }: NavbarProps) => {
             </Button>
             <Button
               as={RouterLink}
+              to="/deposit"
+              colorScheme={location.pathname === '/deposit' ? 'teal' : 'gray'}
+              variant={location.pathname === '/deposit' ? 'solid' : 'ghost'}
+              size="sm"
+            >
+              存款
+            </Button>
+            <Button
+              as={RouterLink}
               to="/query-data"
               colorScheme={location.pathname === '/query-data' ? 'teal' : 'gray'}
               variant={location.pathname === '/query-data' ? 'solid' : 'ghost'}
               size="sm"
             >
               奖励查询
-            </Button>
-            <Button
-              as={RouterLink}
-              to="/claim-rewards"
-              colorScheme={location.pathname === '/claim-rewards' ? 'teal' : 'gray'}
-              variant={location.pathname === '/claim-rewards' ? 'solid' : 'ghost'}
-              size="sm"
-            >
-              领取奖励
             </Button>
             <Button
               as={RouterLink}

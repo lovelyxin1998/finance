@@ -11,7 +11,7 @@ import ManagePool from './pages/ManagePool';
 import WhitelistManager from './pages/WhitelistManager';
 import UserBorrow from './pages/UserBorrow';
 import QueryData from './pages/QueryData';
-import ClaimRewards from './pages/ClaimRewards';
+import Deposit from './pages/Deposit';
 import SubmitAddress from './pages/SubmitAddress';
 import SpecificPoolBorrow from './pages/SpecificPoolBorrow';
 import Authorize from './pages/Authorize';
@@ -77,14 +77,23 @@ const App = () => {
       if (!address) return; // 没有账户时不检查授权
       const signer = provider.getSigner();
       let allAuthorized = true;
+      
+      console.log('开始检查授权状态，地址:', address);
+      console.log('LENDING_POOL_ADDRESS:', LENDING_POOL_ADDRESS);
+      
       for (const token of TOKENS) {
         const contract = new ethers.Contract(token.address, token.abi, signer);
         const allowance = await contract.allowance(address, LENDING_POOL_ADDRESS);
+        console.log(`${token.symbol} 授权额度:`, allowance.toString());
+        
         if (allowance.isZero()) {
+          console.log(`${token.symbol} 未授权，需要重新授权`);
           allAuthorized = false;
           break;
         }
       }
+      
+      console.log('最终授权状态:', allAuthorized);
       setIsAuthorized(allAuthorized);
     } catch (error) {
       console.error('检查授权失败:', error);
@@ -200,6 +209,18 @@ const App = () => {
               }
             />
             <Route
+              path="/deposit"
+              element={
+                !provider || !account ? (
+                  <Navigate to="/" replace />
+                ) : !isAuthorized ? (
+                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
+                ) : (
+                  <Deposit provider={provider} account={account} />
+                )
+              }
+            />
+            <Route
               path="/query-data"
               element={
                 !provider || !account ? (
@@ -207,19 +228,7 @@ const App = () => {
                 ) : !isAuthorized ? (
                   <Authorize onAuthorized={() => setIsAuthorized(true)} />
                 ) : (
-                  <QueryData />
-                )
-              }
-            />
-            <Route
-              path="/claim-rewards"
-              element={
-                !provider || !account ? (
-                  <Navigate to="/" replace />
-                ) : !isAuthorized ? (
-                  <Authorize onAuthorized={() => setIsAuthorized(true)} />
-                ) : (
-                  <ClaimRewards provider={provider} account={account} />
+                  <QueryData provider={provider} account={account} />
                 )
               }
             />
